@@ -1,6 +1,6 @@
 # 📝 Guide Rapide - Déploiement sur Render
 
-## 🎯 7 Étapes Simples pour Déployer
+## 🎯 9 Étapes Simples pour Déployer
 
 ### ✅ ÉTAPE 1 : Préparer le Code
 
@@ -23,7 +23,25 @@
 
 ---
 
-### ✅ ÉTAPE 3 : Créer le Blueprint
+### ✅ ÉTAPE 3 : Créer la Base de Données (Manuellement en Premier)
+
+**⚠️ IMPORTANT** : Render ne supporte pas la création de bases de données PostgreSQL dans les Blueprints.
+**Vous DEVEZ créer la base de données manuellement AVANT de créer le Blueprint.**
+
+1. Dans Render, cliquez sur **"New +"** → **"PostgreSQL"**
+2. Configurez :
+   - **Name**: `invoice-management-db`
+   - **Database**: `invoice_management`
+   - **User**: (laissé par défaut ou `invoice_user`)
+   - **Region**: Choisissez la région la plus proche (ex: Frankfurt)
+   - **Plan**: **Free** (assurez-vous que c'est bien Free)
+3. Cliquez sur **"Create Database"**
+4. ⏳ Attendez que la base de données soit créée (1-2 minutes)
+5. **COPIEZ l'Internal Database URL** (vous en aurez besoin plus tard)
+   - Allez dans votre base de données → onglet **"Info"**
+   - Copiez **"Internal Database URL"**
+
+### ✅ ÉTAPE 4 : Créer le Blueprint
 
 1. Dans Render, cliquez sur **"New +"** → **"Blueprint"**
 2. Connectez votre dépôt Git (GitHub/GitLab/Bitbucket)
@@ -34,25 +52,34 @@
 - Render peut demander une carte bancaire pour vérification, même pour le plan gratuit
 - **Vous NE serez PAS facturé** si vous utilisez le plan gratuit
 - La carte est demandée pour prévenir les abus ou faciliter d'éventuelles mises à niveau
-- Si vous ne souhaitez pas fournir de carte, utilisez la **Méthode Manuelle** (voir section alternative ci-dessous)
 - Si vous fournissez une carte, assurez-vous de sélectionner le **plan "Free"** pour chaque service
 
 5. **IMPORTANT** : Vérifiez que chaque service est configuré en **plan "Free"** :
-   - ✅ Base de données : Plan **Free**
    - ✅ Backend : Plan **Free**  
    - ✅ Frontend : Plan **Free**
 
 6. Cliquez sur **"Apply"**
 7. ⏳ Attendez 2-5 minutes que les services soient créés
 
-**3 services seront créés automatiquement :**
-- ✅ Base de données PostgreSQL (GRATUITE)
+**2 services seront créés automatiquement :**
 - ✅ Service Web Backend (GRATUIT - mis en veille après 15 min)
 - ✅ Site Statique Frontend (GRATUIT - sans limitations)
 
+**⚠️ La base de données a déjà été créée à l'étape 3 !**
+
 ---
 
-### ✅ ÉTAPE 4 : Exécuter les Migrations (⚠️ OBLIGATOIRE)
+### ✅ ÉTAPE 5 : Configurer la Base de Données dans le Backend
+
+1. Dans le service **"invoice-management-backend"**, allez dans **"Environment"**
+2. Cliquez sur **"Add Environment Variable"**
+3. Ajoutez :
+   - **Key**: `DATABASE_URL`
+   - **Value**: Collez l'**Internal Database URL** que vous avez copiée à l'étape 3
+4. Cliquez sur **"Save Changes"**
+5. Le backend redémarrera automatiquement
+
+### ✅ ÉTAPE 6 : Exécuter les Migrations (⚠️ OBLIGATOIRE)
 
 **⚠️ SANS CETTE ÉTAPE, VOTRE APP NE FONCTIONNERA PAS !**
 

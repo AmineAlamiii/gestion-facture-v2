@@ -1,12 +1,7 @@
 services:
-  # Base de données PostgreSQL (GRATUITE - limitée à ~1GB et supprimée après 90 jours d'inactivité)
-  - type: pg
-    name: invoice-management-db
-    plan: free
-    databaseName: invoice_management
-    user: invoice_user
-
   # Service Backend (GRATUIT - mis en veille après 15 min d'inactivité)
+  # NOTE: La base de données PostgreSQL doit être créée manuellement avant ce déploiement
+  # Voir GUIDE-DEPLOIEMENT-RENDER.md pour les instructions complètes
   - type: web
     name: invoice-management-backend
     env: node
@@ -20,10 +15,8 @@ services:
         value: production
       - key: PORT
         value: 3001
-      - key: DATABASE_URL
-        fromDatabase:
-          name: invoice-management-db
-          property: connectionString
+      # DATABASE_URL doit être ajoutée manuellement après la création de la base de données
+      # Utilisez l'Internal Database URL de votre base de données PostgreSQL
       - key: JWT_SECRET
         generateValue: true
       - key: JWT_EXPIRES_IN
