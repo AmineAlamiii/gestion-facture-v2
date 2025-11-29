@@ -54,12 +54,21 @@
 - La carte est demandée pour prévenir les abus ou faciliter d'éventuelles mises à niveau
 - Si vous fournissez une carte, assurez-vous de sélectionner le **plan "Free"** pour chaque service
 
-5. **IMPORTANT** : Vérifiez que chaque service est configuré en **plan "Free"** :
-   - ✅ Backend : Plan **Free**  
-   - ✅ Frontend : Plan **Free**
+5. **⚠️ IMPORTANT : Changer le plan en "Free"** :
+   - Render affichera probablement **"Starter $7/mois"** par défaut
+   - **CLIQUEZ sur le service `invoice-management-backend`** dans la liste
+   - Dans la configuration qui s'ouvre, cherchez **"Instance Type"** ou **"Plan"**
+   - Changez de **"Starter"** à **"Free"** (ou **"Starter Free"**)
+   - Le prix devrait passer de $7/mois à $0/mois
+   - Fermez la configuration
+   - Répétez pour le frontend si nécessaire (mais les sites statiques sont généralement gratuits)
 
-6. Cliquez sur **"Apply"**
-7. ⏳ Attendez 2-5 minutes que les services soient créés
+6. **Vérifiez le prix total** :
+   - L'**"Estimated pricing"** devrait maintenant afficher **"$0 per month"** ou similaire
+   - Si c'est encore $7, retournez au service backend et changez le plan
+
+7. Cliquez sur **"Apply"** ou **"Deploy Blueprint"**
+8. ⏳ Attendez 2-5 minutes que les services soient créés
 
 **2 services seront créés automatiquement :**
 - ✅ Service Web Backend (GRATUIT - mis en veille après 15 min)
