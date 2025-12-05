@@ -4,8 +4,9 @@
   "description": "Application de gestion de factures - Backend et Frontend",
   "private": true,
   "scripts": {
-    "build": "npm run build:prisma",
-    "build:prisma": "cd backend && npx prisma generate",
+    "build": "npm run build:prisma && npm run build:frontend",
+    "build:prisma": "cd backend && npm install && npx prisma generate",
+    "build:frontend": "cd frontend && npm install --include=dev && npm run build",
     "postinstall": "npm run build:prisma"
   },
   "engines": {
