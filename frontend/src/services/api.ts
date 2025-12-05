@@ -16,8 +16,8 @@ import {
   PaginatedResponse
 } from '../types';
 
-// Configuration de l'API
-const API_BASE_URL = 'http://localhost:3001/api';
+// Configuration de l'API - Utilise la configuration centralisée
+import { getApiBaseUrl } from '../config/api';
 
 // Types pour les réponses de l'API
 interface ApiError {
@@ -43,7 +43,7 @@ async function apiCall<T>(
   endpoint: string,
   options: RequestInit = {}
 ): Promise<T> {
-  const url = `${API_BASE_URL}${endpoint}`;
+  const url = `${getApiBaseUrl()}${endpoint}`;
   
   const defaultOptions: RequestInit = {
     headers: {

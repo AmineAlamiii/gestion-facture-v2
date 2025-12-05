@@ -7,6 +7,7 @@ import SalesForm from './SalesForm';
 import { LoadingSpinner } from '../common/LoadingSpinner';
 import { ErrorMessage } from '../common/ErrorMessage';
 import { numberToWords } from '../../utils/invoiceUtils';
+import { getApiBaseUrl } from '../../config/api';
 
 const SalesListContainer: React.FC = () => {
   const [editingSale, setEditingSale] = useState<any>(null);
@@ -91,7 +92,7 @@ const SalesListContainer: React.FC = () => {
   const handlePrint = async (sale: any) => {
     try {
       // Récupérer les détails complets de la facture
-      const response = await fetch(`http://localhost:3001/api/invoices/sales/${sale.id}`);
+      const response = await fetch(`${getApiBaseUrl()}/invoices/sales/${sale.id}`);
       const result = await response.json();
       
       if (!result.success) {

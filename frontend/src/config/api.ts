@@ -1,16 +1,16 @@
 // Configuration de l'API
 // En production sur Vercel, utilise l'URL relative car backend et frontend sont sur le même domaine
 // En développement, utilise l'URL complète du backend local
-const getApiBaseUrl = (): string => {
+export const getApiBaseUrl = (): string => {
   // Vérifier si on est sur un domaine Vercel
-  const isVercel = typeof window !== 'undefined' && (
-    window.location.hostname.includes('vercel.app') || 
-    window.location.hostname.includes('vercel.com')
-  );
-  
-  // Si on est sur Vercel, toujours utiliser l'URL relative
-  if (isVercel) {
-    return '/api';
+  if (typeof window !== 'undefined') {
+    const isVercel = window.location.hostname.includes('vercel.app') || 
+                     window.location.hostname.includes('vercel.com');
+    
+    // Si on est sur Vercel, toujours utiliser l'URL relative
+    if (isVercel) {
+      return '/api';
+    }
   }
   
   // Si VITE_API_URL est défini, l'utiliser
@@ -24,7 +24,9 @@ const getApiBaseUrl = (): string => {
 };
 
 export const API_CONFIG = {
-  BASE_URL: getApiBaseUrl(),
+  get BASE_URL() {
+    return getApiBaseUrl();
+  },
   TIMEOUT: 10000, // 10 secondes
   RETRY_ATTEMPTS: 3,
   RETRY_DELAY: 1000, // 1 seconde

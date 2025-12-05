@@ -7,6 +7,7 @@ import PurchaseForm from './PurchaseForm';
 import ProductStockContainer from '../products/ProductStockContainer';
 import { LoadingSpinner } from '../common/LoadingSpinner';
 import { ErrorMessage } from '../common/ErrorMessage';
+import { getApiBaseUrl } from '../../config/api';
 
 const PurchaseListContainer: React.FC = () => {
   const [editingPurchase, setEditingPurchase] = useState<any>(null);
@@ -106,7 +107,7 @@ const PurchaseListContainer: React.FC = () => {
   const handlePrint = async (purchase: any) => {
     try {
       // Récupérer les détails complets de la facture
-      const response = await fetch(`http://localhost:3001/api/invoices/purchases/${purchase.id}`);
+      const response = await fetch(`${getApiBaseUrl()}/invoices/purchases/${purchase.id}`);
       const result = await response.json();
       
       if (!result.success) {
