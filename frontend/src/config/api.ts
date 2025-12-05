@@ -2,25 +2,29 @@
 // En production sur Vercel, utilise l'URL relative car backend et frontend sont sur le même domaine
 // En développement, utilise l'URL complète du backend local
 export const getApiBaseUrl = (): string => {
-  // Vérifier si on est sur un domaine Vercel
-  if (typeof window !== 'undefined') {
-    const isVercel = window.location.hostname.includes('vercel.app') || 
-                     window.location.hostname.includes('vercel.com');
-    
-    // Si on est sur Vercel, toujours utiliser l'URL relative
-    if (isVercel) {
-      return '/api';
-    }
-  }
-  
-  // Si VITE_API_URL est défini, l'utiliser
+  // Si VITE_API_URL est défini, l'utiliser (priorité absolue)
   const viteApiUrl = (import.meta as any).env?.VITE_API_URL;
   if (viteApiUrl) {
     return viteApiUrl;
   }
   
-  // Par défaut en développement local
-  return 'http://localhost:3001/api';
+  // Vérifier au runtime si on est en localhost (développement local)
+  if (typeof window !== 'undefined') {
+    const isLocalhost = window.location.hostname === 'localhost' || 
+                        window.location.hostname === '127.0.0.1' ||
+                        window.location.hostname === '';
+    
+    // Si on est en localhost, utiliser l'URL complète
+    if (isLocalhost) {
+      return 'http://localhost:3001/api';
+    }
+    
+    // Sinon (production, Vercel, etc.), utiliser l'URL relative
+    return '/api';
+  }
+  
+  // Fallback : si window n'est pas disponible (SSR), utiliser l'URL relative
+  return '/api';
 };
 
 export const API_CONFIG = {
