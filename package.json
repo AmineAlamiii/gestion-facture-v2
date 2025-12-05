@@ -1,0 +1,24 @@
+{
+  "name": "gestion-facture-v2",
+  "version": "1.0.0",
+  "description": "Application de gestion de factures - Backend et Frontend",
+  "private": true,
+  "scripts": {
+    "build": "npm run build:prisma",
+    "build:prisma": "cd backend && npx prisma generate",
+    "postinstall": "npm run build:prisma"
+  },
+  "engines": {
+    "node": ">=18.x"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "cors": "^2.8.5",
+    "@prisma/client": "^5.7.1",
+    "pg": "^8.11.3"
+  },
+  "devDependencies": {
+    "prisma": "^5.7.1"
+  }
+}
+

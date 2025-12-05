@@ -1,6 +1,23 @@
 // Configuration de l'API
+// En production sur Vercel, utilise l'URL relative car backend et frontend sont sur le même domaine
+// En développement, utilise l'URL complète du backend local
+const getApiBaseUrl = () => {
+  // Si VITE_API_URL est défini, l'utiliser (pour développement ou configuration personnalisée)
+  if (import.meta.env.VITE_API_URL) {
+    return import.meta.env.VITE_API_URL;
+  }
+  
+  // En production sur Vercel, utiliser l'URL relative
+  if (import.meta.env.PROD) {
+    return '/api';
+  }
+  
+  // Par défaut en développement local
+  return 'http://localhost:3001/api';
+};
+
 export const API_CONFIG = {
-  BASE_URL: import.meta.env.VITE_API_URL || 'http://localhost:3001/api',
+  BASE_URL: getApiBaseUrl(),
   TIMEOUT: 10000, // 10 secondes
   RETRY_ATTEMPTS: 3,
   RETRY_DELAY: 1000, // 1 seconde
