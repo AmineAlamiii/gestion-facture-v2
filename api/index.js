@@ -856,5 +856,6 @@ app.use('*', (req, res) => {
 });
 
 // Export pour Vercel Serverless Functions
+// Vercel peut utiliser directement l'app Express
 module.exports = app;
 
