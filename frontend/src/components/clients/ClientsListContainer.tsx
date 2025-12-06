@@ -4,19 +4,23 @@ import ClientsList from './ClientsList';
 import ClientForm from './ClientForm';
 import { LoadingSpinner } from '../common/LoadingSpinner';
 import { ErrorMessage } from '../common/ErrorMessage';
+import Pagination from '../common/Pagination';
 
 const ClientsListContainer: React.FC = () => {
   const [editingClient, setEditingClient] = useState<any>(null);
   const [showForm, setShowForm] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 50;
   
   const { 
     clients, 
+    pagination,
     loading, 
     error, 
     createClient, 
     updateClient, 
     deleteClient 
-  } = useClients();
+  } = useClients(undefined, itemsPerPage, (currentPage - 1) * itemsPerPage);
 
   const handleCreateNew = () => {
     setEditingClient(null);
@@ -82,13 +86,32 @@ const ClientsListContainer: React.FC = () => {
     );
   }
 
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const totalPages = pagination ? Math.ceil(pagination.total / itemsPerPage) : 1;
+
   return (
-    <ClientsList
-      clients={clients}
-      onEdit={handleEdit}
-      onDelete={handleDelete}
-      onCreateNew={handleCreateNew}
-    />
+    <>
+      <ClientsList
+        clients={clients}
+        onEdit={handleEdit}
+        onDelete={handleDelete}
+        onCreateNew={handleCreateNew}
+      />
+      {pagination && (
+        <Pagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          totalItems={pagination.total}
+          itemsPerPage={itemsPerPage}
+          onPageChange={handlePageChange}
+          loading={loading}
+        />
+      )}
+    </>
   );
 };
 

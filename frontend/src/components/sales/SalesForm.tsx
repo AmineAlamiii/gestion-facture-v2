@@ -25,7 +25,7 @@ const SalesForm: React.FC<SalesFormProps> = ({
     client: sale?.client || null,
     date: sale?.date || new Date().toISOString().split('T')[0],
     dueDate: sale?.dueDate || '',
-    status: sale?.status || 'draft' as const,
+    status: sale?.status || 'paid' as const,
     paymentMethod: sale?.paymentMethod || 'Espèces',
     notes: sale?.notes || '',
     items: sale?.items || [] as InvoiceItem[],
@@ -905,9 +905,9 @@ const SalesForm: React.FC<SalesFormProps> = ({
 
       {/* Product Selector Modal */}
       {showProductSelector && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-60">
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl max-h-[80vh] overflow-hidden">
-            <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] overflow-hidden">
+            <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center sticky top-0 bg-white">
               <h3 className="text-lg font-semibold text-gray-800">Sélectionner un produit</h3>
               <button 
                 onClick={() => {
@@ -920,7 +920,7 @@ const SalesForm: React.FC<SalesFormProps> = ({
               </button>
             </div>
 
-            <div className="p-6">
+            <div className="p-6 overflow-y-auto max-h-[calc(90vh-80px)]">
               {/* Barre de recherche */}
               <div className="mb-4">
                 <input
@@ -932,53 +932,51 @@ const SalesForm: React.FC<SalesFormProps> = ({
                 />
               </div>
 
-              <div className="overflow-y-auto max-h-96">
-                <div className="grid gap-4">
-                  {filteredProducts.map((product) => (
-                    <div key={product.id} className="border border-gray-200 rounded-lg p-4 hover:bg-gray-50 transition-colors">
-                      <div className="flex justify-between items-start">
-                        <div className="flex-1">
-                          <h4 className="font-medium text-gray-900">{product.description}</h4>
-                          <p className="text-sm text-gray-600 mt-1">
-                            Stock: {product.totalQuantity} • Dernier fournisseur: {product.supplierName}
-                          </p>
-                          <div className="flex items-center space-x-4 mt-2 text-sm text-gray-500">
-                            <span>Prix moyen: {product.averageUnitPrice.toFixed(2)} DH</span>
-                            <span>Dernier prix: {product.lastPurchasePrice.toFixed(2)} DH</span>
-                            <span>TVA: {product.taxRate}%</span>
-                          </div>
-                        </div>
-                        <div className="flex space-x-2">
-                          <button
-                            onClick={() => addProductToSale(product, 30)}
-                            className="bg-green-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-green-700 transition-colors font-semibold"
-                          >
-                            +30%
-                          </button>
+              <div className="grid gap-4">
+                {filteredProducts.map((product) => (
+                  <div key={product.id} className="border border-gray-200 rounded-lg p-4 hover:bg-gray-50 transition-colors">
+                    <div className="flex justify-between items-start">
+                      <div className="flex-1">
+                        <h4 className="font-medium text-gray-900">{product.description}</h4>
+                        <p className="text-sm text-gray-600 mt-1">
+                          Stock: {product.totalQuantity} • Dernier fournisseur: {product.supplierName}
+                        </p>
+                        <div className="flex items-center space-x-4 mt-2 text-sm text-gray-500">
+                          <span>Prix moyen: {product.averageUnitPrice.toFixed(2)} DH</span>
+                          <span>Dernier prix: {product.lastPurchasePrice.toFixed(2)} DH</span>
+                          <span>TVA: {product.taxRate}%</span>
                         </div>
                       </div>
+                      <div className="flex space-x-2">
+                        <button
+                          onClick={() => addProductToSale(product, 30)}
+                          className="bg-green-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-green-700 transition-colors font-semibold"
+                        >
+                          +30%
+                        </button>
+                      </div>
                     </div>
-                  ))}
-                </div>
-
-                {filteredProducts.length === 0 && products.length > 0 && (
-                  <div className="text-center py-8">
-                    <p className="text-gray-500">Aucun produit trouvé</p>
-                    <p className="text-gray-400 text-sm mt-1">
-                      Essayez avec un autre terme de recherche
-                    </p>
                   </div>
-                )}
-
-                {products.length === 0 && (
-                  <div className="text-center py-8">
-                    <p className="text-gray-500">Aucun produit disponible</p>
-                    <p className="text-gray-400 text-sm mt-1">
-                      Créez d'abord des factures d'achat
-                    </p>
-                  </div>
-                )}
+                ))}
               </div>
+
+              {filteredProducts.length === 0 && products.length > 0 && (
+                <div className="text-center py-8">
+                  <p className="text-gray-500">Aucun produit trouvé</p>
+                  <p className="text-gray-400 text-sm mt-1">
+                    Essayez avec un autre terme de recherche
+                  </p>
+                </div>
+              )}
+
+              {products.length === 0 && (
+                <div className="text-center py-8">
+                  <p className="text-gray-500">Aucun produit disponible</p>
+                  <p className="text-gray-400 text-sm mt-1">
+                    Créez d'abord des factures d'achat
+                  </p>
+                </div>
+              )}
             </div>
           </div>
         </div>

@@ -76,25 +76,25 @@ const ClientsList: React.FC<ClientsListProps> = ({
 
       {/* Desktop Table View */}
       <div className="hidden lg:block overflow-x-auto">
-        <table className="w-full">
+        <table className="w-full table-fixed">
           <thead className="bg-gray-50">
             <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-[200px]">
                 Nom
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-[200px]">
                 Email
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-[140px]">
                 Téléphone
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-[250px]">
                 Adresse
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-[140px]">
                 N° TVA
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-[100px]">
                 Actions
               </th>
             </tr>
@@ -102,24 +102,24 @@ const ClientsList: React.FC<ClientsListProps> = ({
           <tbody className="bg-white divide-y divide-gray-200">
             {clients.map((client) => (
               <tr key={client.id} className="hover:bg-gray-50 transition-colors">
-                <td className="px-6 py-4 whitespace-nowrap">
+                <td className="px-6 py-4">
                   <div className="flex items-center">
-                    <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center mr-3">
+                    <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center mr-3 flex-shrink-0">
                       <User className="w-4 h-4 text-blue-600" />
                     </div>
-                    <div className="text-sm font-medium text-gray-900">{client.name}</div>
+                    <div className="text-sm font-medium text-gray-900 break-words">{client.name}</div>
                   </div>
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                <td className="px-6 py-4 text-sm text-gray-900 break-words">
                   {client.email}
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                <td className="px-6 py-4 text-sm text-gray-900 break-words">
                   {client.phone}
                 </td>
-                <td className="px-6 py-4 text-sm text-gray-900 max-w-xs truncate">
+                <td className="px-6 py-4 text-sm text-gray-900 break-words">
                   {client.address}
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                <td className="px-6 py-4 text-sm text-gray-900 break-words">
                   {client.taxId || '-'}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">

@@ -1,6 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 const prisma = require('./lib/prisma');
+const { authenticateToken, generateToken } = require('./middleware/auth');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -11,6 +12,68 @@ app.use(cors({
   credentials: true
 }));
 app.use(express.json());
+
+// Route de login (PUBLIQUE - pas besoin d'authentification)
+app.post('/api/auth/login', async (req, res) => {
+  try {
+    const { username, password } = req.body;
+
+    // Vérifier les identifiants (admin/Medical@123)
+    if (username === 'admin' && password === 'Medical@123') {
+      // Générer un token JWT
+      const token = generateToken(username);
+
+      res.json({
+        success: true,
+        data: {
+          token,
+          user: {
+            username: 'admin'
+          }
+        }
+      });
+    } else {
+      res.status(401).json({
+        success: false,
+        error: 'Nom d\'utilisateur ou mot de passe incorrect'
+      });
+    }
+  } catch (error) {
+    console.error('Erreur lors de la connexion:', error);
+    res.status(500).json({ success: false, error: 'Erreur interne du serveur' });
+  }
+});
+
+// Route de vérification du token (pour vérifier si le token est valide)
+app.get('/api/auth/verify', authenticateToken, (req, res) => {
+  res.json({
+    success: true,
+    data: {
+      user: req.user
+    }
+  });
+});
+
+// Middleware pour protéger toutes les routes API sauf auth et health
+app.use('/api', (req, res, next) => {
+  // Routes publiques (pas besoin d'authentification)
+  const publicRoutes = [
+    '/api/auth/login',
+    '/api/health',
+    '/api/check-tables'
+  ];
+
+  // Utiliser req.originalUrl pour obtenir le chemin complet
+  const fullPath = req.originalUrl || req.url;
+
+  // Si la route est publique, passer au suivant
+  if (publicRoutes.some(route => fullPath.startsWith(route))) {
+    return next();
+  }
+
+  // Sinon, vérifier l'authentification
+  authenticateToken(req, res, next);
+});
 
 // Fonction pour initialiser les données de test
 async function initTestData() {
@@ -100,19 +163,23 @@ app.get('/api/check-tables', async (req, res) => {
 // Routes des fournisseurs
 app.get('/api/suppliers', async (req, res) => {
   try {
-    const { search } = req.query;
+    const { search, limit } = req.query;
     
+    const where = search ? {
+      OR: [
+        { name: { contains: search, mode: 'insensitive' } },
+        { email: { contains: search, mode: 'insensitive' } }
+      ]
+    } : {};
+
+    const take = limit ? Math.min(parseInt(limit), 500) : undefined;
+
     const suppliers = await prisma.supplier.findMany({
-      where: search ? {
-        OR: [
-          { name: { contains: search, mode: 'insensitive' } },
-          { email: { contains: search, mode: 'insensitive' } }
-        ]
-      } : {},
-      orderBy: { createdAt: 'desc' }
+      where,
+      orderBy: { createdAt: 'desc' },
+      ...(take && { take })
     });
 
-    console.log(`Récupération de ${suppliers.length} fournisseurs`);
     res.json({ success: true, data: suppliers });
   } catch (error) {
     console.error('Erreur lors de la récupération des fournisseurs:', error);
@@ -225,16 +292,21 @@ app.delete('/api/suppliers/:id', async (req, res) => {
 // Routes des clients
 app.get('/api/clients', async (req, res) => {
   try {
-    const { search } = req.query;
+    const { search, limit } = req.query;
     
+    const where = search ? {
+      OR: [
+        { name: { contains: search, mode: 'insensitive' } },
+        { email: { contains: search, mode: 'insensitive' } }
+      ]
+    } : {};
+
+    const take = limit ? Math.min(parseInt(limit), 500) : undefined;
+
     const clients = await prisma.client.findMany({
-      where: search ? {
-        OR: [
-          { name: { contains: search, mode: 'insensitive' } },
-          { email: { contains: search, mode: 'insensitive' } }
-        ]
-      } : {},
-      orderBy: { createdAt: 'desc' }
+      where,
+      orderBy: { createdAt: 'desc' },
+      ...(take && { take })
     });
 
     res.json({ success: true, data: clients });
@@ -333,7 +405,7 @@ app.delete('/api/clients/:id', async (req, res) => {
 // Routes des factures d'achat
 app.get('/api/invoices/purchases', async (req, res) => {
   try {
-    const { status, search } = req.query;
+    const { status, search, limit, skip } = req.query;
     
     const where = {};
     if (status) where.status = status;
@@ -344,15 +416,24 @@ app.get('/api/invoices/purchases', async (req, res) => {
       ];
     }
 
-    const invoices = await prisma.purchaseInvoice.findMany({
-      where,
-      include: {
-        supplier: {
-          select: { id: true, name: true, email: true }
-        }
-      },
-      orderBy: { createdAt: 'desc' }
-    });
+    // Limiter les résultats par défaut à 100, max 500
+    const take = limit ? Math.min(parseInt(limit), 500) : 100;
+    const skipValue = skip ? parseInt(skip) : 0;
+
+    const [invoices, total] = await Promise.all([
+      prisma.purchaseInvoice.findMany({
+        where,
+        include: {
+          supplier: {
+            select: { id: true, name: true, email: true }
+          }
+        },
+        orderBy: { createdAt: 'desc' },
+        take,
+        skip: skipValue
+      }),
+      prisma.purchaseInvoice.count({ where })
+    ]);
 
     // Transformer les données pour inclure un objet supplier
     const transformedInvoices = invoices.map(invoice => ({
@@ -364,7 +445,16 @@ app.get('/api/invoices/purchases', async (req, res) => {
       } : null
     }));
 
-    res.json({ success: true, data: transformedInvoices });
+    res.json({ 
+      success: true, 
+      data: transformedInvoices,
+      pagination: {
+        total,
+        limit: take,
+        skip: skipValue,
+        hasMore: skipValue + take < total
+      }
+    });
   } catch (error) {
     console.error('Erreur lors de la récupération des factures d\'achat:', error);
     res.status(500).json({ success: false, error: 'Erreur interne du serveur' });
@@ -581,7 +671,7 @@ app.delete('/api/invoices/purchases/:id', async (req, res) => {
 // Routes des factures de vente
 app.get('/api/invoices/sales', async (req, res) => {
   try {
-    const { status, search } = req.query;
+    const { status, search, limit, skip } = req.query;
     
     const where = {};
     if (status) where.status = status;
@@ -592,15 +682,24 @@ app.get('/api/invoices/sales', async (req, res) => {
       ];
     }
 
-    const invoices = await prisma.saleInvoice.findMany({
-      where,
-      include: {
-        client: {
-          select: { id: true, name: true, email: true }
-        }
-      },
-      orderBy: { createdAt: 'desc' }
-    });
+    // Limiter les résultats par défaut à 100, max 500
+    const take = limit ? Math.min(parseInt(limit), 500) : 100;
+    const skipValue = skip ? parseInt(skip) : 0;
+
+    const [invoices, total] = await Promise.all([
+      prisma.saleInvoice.findMany({
+        where,
+        include: {
+          client: {
+            select: { id: true, name: true, email: true }
+          }
+        },
+        orderBy: { createdAt: 'desc' },
+        take,
+        skip: skipValue
+      }),
+      prisma.saleInvoice.count({ where })
+    ]);
 
     // Transformer les données pour inclure un objet client
     const transformedInvoices = invoices.map(invoice => ({
@@ -612,7 +711,16 @@ app.get('/api/invoices/sales', async (req, res) => {
       } : null
     }));
 
-    res.json({ success: true, data: transformedInvoices });
+    res.json({ 
+      success: true, 
+      data: transformedInvoices,
+      pagination: {
+        total,
+        limit: take,
+        skip: skipValue,
+        hasMore: skipValue + take < total
+      }
+    });
   } catch (error) {
     console.error('Erreur lors de la récupération des factures de vente:', error);
     res.status(500).json({ success: false, error: 'Erreur interne du serveur' });
@@ -677,7 +785,7 @@ app.post('/api/invoices/sales', async (req, res) => {
         clientId,
         date,
         dueDate,
-        status,
+        status: status || 'paid',
         subtotal,
         taxAmount,
         total,
@@ -770,59 +878,98 @@ app.delete('/api/invoices/sales/:id', async (req, res) => {
 // Routes des produits
 app.get('/api/products', async (req, res) => {
   try {
-    const { search } = req.query;
+    const { search, limit } = req.query;
     
+    const where = search ? {
+      description: { contains: search, mode: 'insensitive' }
+    } : {};
+
+    const take = limit ? Math.min(parseInt(limit), 500) : undefined;
+    
+    // Récupérer les produits avec le fournisseur
     const products = await prisma.product.findMany({
-      where: search ? {
-        description: { contains: search, mode: 'insensitive' }
-      } : {},
+      where,
       include: {
-        supplier: true
+        supplier: {
+          select: {
+            id: true,
+            name: true
+          }
+        }
       },
-      orderBy: { description: 'asc' }
+      orderBy: { description: 'asc' },
+      ...(take && { take })
     });
 
-    // Formater les produits pour inclure supplierName et récupérer l'historique des achats
-    const productsWithPurchases = await Promise.all(
-      products.map(async (product) => {
-        // Récupérer l'historique des achats pour ce produit
-        const invoiceItems = await prisma.invoiceItem.findMany({
-          where: {
-            invoiceType: 'purchase',
-            description: product.description
-          },
-          orderBy: { createdAt: 'desc' }
-        });
+    // Si aucun produit, retourner directement
+    if (products.length === 0) {
+      return res.json({ success: true, data: [] });
+    }
 
-        // Pour chaque item, récupérer les informations de la facture d'achat
-        const purchases = await Promise.all(
-          invoiceItems.map(async (item) => {
-            const purchaseInvoice = await prisma.purchaseInvoice.findUnique({
-              where: { id: item.invoiceId },
-              select: {
-                invoiceNumber: true,
-                date: true
-              }
-            });
+    // Récupérer tous les invoiceItems des produits en une seule requête
+    const productDescriptions = products.map(p => p.description);
+    const allInvoiceItems = await prisma.invoiceItem.findMany({
+      where: {
+        invoiceType: 'purchase',
+        description: { in: productDescriptions }
+      },
+      select: {
+        id: true,
+        invoiceId: true,
+        description: true,
+        quantity: true,
+        unitPrice: true,
+        createdAt: true
+      },
+      orderBy: { createdAt: 'desc' }
+    });
 
-            return {
-              invoiceId: item.invoiceId,
-              invoiceNumber: purchaseInvoice?.invoiceNumber || '',
-              quantity: item.quantity,
-              unitPrice: item.unitPrice,
-              date: purchaseInvoice?.date || ''
-            };
-          })
-        );
+    // Récupérer toutes les factures nécessaires en une seule requête
+    const invoiceIds = [...new Set(allInvoiceItems.map(item => item.invoiceId))];
+    const purchaseInvoices = await prisma.purchaseInvoice.findMany({
+      where: {
+        id: { in: invoiceIds }
+      },
+      select: {
+        id: true,
+        invoiceNumber: true,
+        date: true
+      }
+    });
 
+    // Créer un Map pour un accès rapide aux factures
+    const invoiceMap = new Map(purchaseInvoices.map(inv => [inv.id, inv]));
+
+    // Grouper les invoiceItems par description de produit
+    const itemsByProduct = new Map();
+    allInvoiceItems.forEach(item => {
+      if (!itemsByProduct.has(item.description)) {
+        itemsByProduct.set(item.description, []);
+      }
+      itemsByProduct.get(item.description).push(item);
+    });
+
+    // Construire les produits avec leurs achats
+    const productsWithPurchases = products.map(product => {
+      const items = itemsByProduct.get(product.description) || [];
+      const purchases = items.map(item => {
+        const invoice = invoiceMap.get(item.invoiceId);
         return {
-          ...product,
-          supplierName: product.supplier?.name || product.supplierName || 'N/A',
-          supplierId: product.supplierId || '',
-          purchases: purchases
+          invoiceId: item.invoiceId,
+          invoiceNumber: invoice?.invoiceNumber || '',
+          quantity: item.quantity,
+          unitPrice: item.unitPrice,
+          date: invoice?.date || ''
         };
-      })
-    );
+      });
+
+      return {
+        ...product,
+        supplierName: product.supplier?.name || product.supplierName || 'N/A',
+        supplierId: product.supplierId || '',
+        purchases: purchases
+      };
+    });
 
     res.json({ success: true, data: productsWithPurchases });
   } catch (error) {
@@ -834,6 +981,26 @@ app.get('/api/products', async (req, res) => {
 // Route du tableau de bord
 app.get('/api/dashboard/stats', async (req, res) => {
   try {
+    const now = new Date();
+    const currentMonth = now.getMonth();
+    const currentYear = now.getFullYear();
+    
+    // Calculer le premier et dernier jour du mois actuel
+    const firstDayCurrentMonth = new Date(currentYear, currentMonth, 1);
+    const lastDayCurrentMonth = new Date(currentYear, currentMonth + 1, 0);
+    
+    // Calculer le premier et dernier jour du mois précédent
+    const firstDayPreviousMonth = new Date(currentYear, currentMonth - 1, 1);
+    const lastDayPreviousMonth = new Date(currentYear, currentMonth, 0);
+
+    // Fonction helper pour formater une date au format YYYY-MM-DD
+    const formatDate = (date) => {
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    };
+
     const [
       totalSuppliers,
       totalClients,
@@ -841,7 +1008,13 @@ app.get('/api/dashboard/stats', async (req, res) => {
       totalSaleInvoices,
       totalProducts,
       totalPurchases,
-      totalSales
+      totalSales,
+      // Statistiques du mois actuel
+      currentMonthPurchases,
+      currentMonthSales,
+      // Statistiques du mois précédent
+      previousMonthPurchases,
+      previousMonthSales
     ] = await Promise.all([
       prisma.supplier.count(),
       prisma.client.count(),
@@ -849,11 +1022,107 @@ app.get('/api/dashboard/stats', async (req, res) => {
       prisma.saleInvoice.count(),
       prisma.product.count(),
       prisma.purchaseInvoice.aggregate({ _sum: { total: true } }),
-      prisma.saleInvoice.aggregate({ _sum: { total: true } })
+      prisma.saleInvoice.aggregate({ _sum: { total: true } }),
+      // Achats du mois actuel
+      prisma.purchaseInvoice.aggregate({
+        _sum: { total: true },
+        where: {
+          date: {
+            gte: formatDate(firstDayCurrentMonth),
+            lte: formatDate(lastDayCurrentMonth)
+          }
+        }
+      }),
+      // Ventes du mois actuel
+      prisma.saleInvoice.aggregate({
+        _sum: { total: true },
+        where: {
+          date: {
+            gte: formatDate(firstDayCurrentMonth),
+            lte: formatDate(lastDayCurrentMonth)
+          }
+        }
+      }),
+      // Achats du mois précédent
+      prisma.purchaseInvoice.aggregate({
+        _sum: { total: true },
+        where: {
+          date: {
+            gte: formatDate(firstDayPreviousMonth),
+            lte: formatDate(lastDayPreviousMonth)
+          }
+        }
+      }),
+      // Ventes du mois précédent
+      prisma.saleInvoice.aggregate({
+        _sum: { total: true },
+        where: {
+          date: {
+            gte: formatDate(firstDayPreviousMonth),
+            lte: formatDate(lastDayPreviousMonth)
+          }
+        }
+      })
     ]);
+
+    const currentPurchasesTotal = currentMonthPurchases._sum.total || 0;
+    const currentSalesTotal = currentMonthSales._sum.total || 0;
+    const previousPurchasesTotal = previousMonthPurchases._sum.total || 0;
+    const previousSalesTotal = previousMonthSales._sum.total || 0;
+
+    // Calculer les pourcentages de variation
+    const purchasesChange = previousPurchasesTotal > 0 
+      ? ((currentPurchasesTotal - previousPurchasesTotal) / previousPurchasesTotal) * 100 
+      : (currentPurchasesTotal > 0 ? 100 : 0);
+    
+    const salesChange = previousSalesTotal > 0 
+      ? ((currentSalesTotal - previousSalesTotal) / previousSalesTotal) * 100 
+      : (currentSalesTotal > 0 ? 100 : 0);
+
+    const currentProfit = currentSalesTotal - currentPurchasesTotal;
+    const previousProfit = previousSalesTotal - previousPurchasesTotal;
+    
+    const profitChange = previousProfit !== 0 
+      ? ((currentProfit - previousProfit) / Math.abs(previousProfit)) * 100 
+      : (currentProfit > 0 ? 100 : (currentProfit < 0 ? -100 : 0));
 
     const profit = (totalSales._sum.total || 0) - (totalPurchases._sum.total || 0);
     const profitMargin = (totalSales._sum.total || 0) > 0 ? (profit / (totalSales._sum.total || 0)) * 100 : 0;
+
+    // Récupérer les factures récentes (limitées aux champs nécessaires)
+    const recentPurchases = await prisma.purchaseInvoice.findMany({
+      take: 5,
+      orderBy: { createdAt: 'desc' },
+      select: {
+        id: true,
+        invoiceNumber: true,
+        total: true,
+        date: true,
+        supplier: {
+          select: {
+            id: true,
+            name: true
+          }
+        }
+      }
+    });
+
+    const recentSales = await prisma.saleInvoice.findMany({
+      take: 5,
+      orderBy: { createdAt: 'desc' },
+      select: {
+        id: true,
+        invoiceNumber: true,
+        total: true,
+        date: true,
+        client: {
+          select: {
+            id: true,
+            name: true
+          }
+        }
+      }
+    });
 
     res.json({
       success: true,
@@ -867,7 +1136,28 @@ app.get('/api/dashboard/stats', async (req, res) => {
           totalPurchases: totalPurchases._sum.total || 0,
           totalSales: totalSales._sum.total || 0,
           profit,
-          profitMargin
+          profitMargin,
+          purchasesChange: Math.round(purchasesChange),
+          salesChange: Math.round(salesChange),
+          profitChange: Math.round(profitChange)
+        },
+        recentActivity: {
+          recentPurchases: recentPurchases.map(p => ({
+            id: p.id,
+            invoiceNumber: p.invoiceNumber,
+            supplier: p.supplier,
+            supplierName: p.supplier?.name,
+            total: p.total,
+            date: p.date
+          })),
+          recentSales: recentSales.map(s => ({
+            id: s.id,
+            invoiceNumber: s.invoiceNumber,
+            client: s.client,
+            clientName: s.client?.name,
+            total: s.total,
+            date: s.date
+          }))
         }
       }
     });

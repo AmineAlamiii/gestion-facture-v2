@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import { ErrorBoundary } from './components/common/ErrorBoundary';
+import { AuthProvider, useAuth } from './contexts/AuthContext';
+import LoginPage from './components/auth/LoginPage';
 
 import Sidebar from './components/layout/Sidebar';
 import Header from './components/layout/Header';
@@ -10,9 +12,22 @@ import ClientsListContainer from './components/clients/ClientsListContainer';
 import SuppliersListContainer from './components/suppliers/SuppliersListContainer';
 import ProductStockContainer from './components/products/ProductStockContainer';
 
-function App() {
+function AppContent() {
+  const { isAuthenticated, login, logout } = useAuth();
   const [activeSection, setActiveSection] = useState('dashboard');
   const [showProductStock, setShowProductStock] = useState(false);
+
+  // Écouter les événements de déconnexion automatique (token expiré)
+  React.useEffect(() => {
+    const handleLogout = () => {
+      logout();
+    };
+
+    window.addEventListener('auth:logout', handleLogout);
+    return () => {
+      window.removeEventListener('auth:logout', handleLogout);
+    };
+  }, [logout]);
 
   const handleViewStock = () => {
     setShowProductStock(true);
@@ -75,6 +90,11 @@ function App() {
     }
   };
 
+  // Si l'utilisateur n'est pas authentifié, afficher la page de login
+  if (!isAuthenticated) {
+    return <LoginPage onLogin={login} />;
+  }
+
   return (
     <ErrorBoundary>
       <div className="min-h-screen bg-gray-50 lg:flex">
@@ -96,6 +116,14 @@ function App() {
         <ProductStockContainer onClose={handleCloseStock} />
       )}
     </ErrorBoundary>
+  );
+}
+
+function App() {
+  return (
+    <AuthProvider>
+      <AppContent />
+    </AuthProvider>
   );
 }
 

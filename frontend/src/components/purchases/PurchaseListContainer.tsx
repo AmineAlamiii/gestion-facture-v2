@@ -7,21 +7,25 @@ import PurchaseForm from './PurchaseForm';
 import ProductStockContainer from '../products/ProductStockContainer';
 import { LoadingSpinner } from '../common/LoadingSpinner';
 import { ErrorMessage } from '../common/ErrorMessage';
+import Pagination from '../common/Pagination';
 import { getApiBaseUrl } from '../../config/api';
 
 const PurchaseListContainer: React.FC = () => {
   const [editingPurchase, setEditingPurchase] = useState<any>(null);
   const [showForm, setShowForm] = useState(false);
   const [showProductStock, setShowProductStock] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 50;
   
   const { 
     purchaseInvoices: purchases, 
+    pagination,
     loading: purchasesLoading, 
     error: purchasesError, 
     createPurchaseInvoice, 
     updatePurchaseInvoice, 
     deletePurchaseInvoice 
-  } = usePurchaseInvoices();
+  } = usePurchaseInvoices(undefined, undefined, itemsPerPage, (currentPage - 1) * itemsPerPage);
 
   const { 
     suppliers, 
@@ -329,16 +333,35 @@ const PurchaseListContainer: React.FC = () => {
     );
   }
 
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const totalPages = pagination ? Math.ceil(pagination.total / itemsPerPage) : 1;
+
   return (
-    <PurchaseList
-      purchases={purchases}
-      onEdit={handleEdit}
-      onDelete={handleDelete}
-      onView={handleView}
-      onPrint={handlePrint}
-      onCreateNew={handleCreateNew}
-      onViewStock={handleViewStock}
-    />
+    <>
+      <PurchaseList
+        purchases={purchases}
+        onEdit={handleEdit}
+        onDelete={handleDelete}
+        onView={handleView}
+        onPrint={handlePrint}
+        onCreateNew={handleCreateNew}
+        onViewStock={handleViewStock}
+      />
+      {pagination && (
+        <Pagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          totalItems={pagination.total}
+          itemsPerPage={itemsPerPage}
+          onPageChange={handlePageChange}
+          loading={purchasesLoading}
+        />
+      )}
+    </>
   );
 };
 

@@ -3,10 +3,18 @@ import { Client, CreateClientRequest, UpdateClientRequest } from '../types';
 import { clientService } from '../services/api';
 import { useApiList, useApiMutation } from './useApi';
 
-export function useClients(search?: string) {
+export function useClients(search?: string, limit?: number, skip?: number) {
+  const [pagination, setPagination] = useState<any>(null);
+  
   const { items, loading, error, refetch, addItem, updateItem, removeItem } = useApiList(
-    () => clientService.getAll(search),
-    [search]
+    async () => {
+      const result = await clientService.getAll(search, limit, skip);
+      if (result.pagination) {
+        setPagination(result.pagination);
+      }
+      return result.data;
+    },
+    [search, limit, skip]
   );
 
   const createMutation = useApiMutation(clientService.create);
@@ -40,6 +48,7 @@ export function useClients(search?: string) {
 
   return {
     clients: items,
+    pagination,
     loading: loading || createMutation.loading || updateMutation.loading || deleteMutation.loading,
     error: error || createMutation.error || updateMutation.error || deleteMutation.error,
     refetch,

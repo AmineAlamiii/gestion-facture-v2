@@ -11,10 +11,18 @@ import { purchaseInvoiceService, saleInvoiceService } from '../services/api';
 import { useApiList, useApiMutation } from './useApi';
 
 // Hook pour les factures d'achat
-export function usePurchaseInvoices(status?: string, search?: string) {
+export function usePurchaseInvoices(status?: string, search?: string, limit?: number, skip?: number) {
+  const [pagination, setPagination] = useState<any>(null);
+  
   const { items, loading, error, refetch, addItem, updateItem, removeItem } = useApiList(
-    () => purchaseInvoiceService.getAll(status, search),
-    [status, search]
+    async () => {
+      const result = await purchaseInvoiceService.getAll(status, search, limit, skip);
+      if (result.pagination) {
+        setPagination(result.pagination);
+      }
+      return result.data;
+    },
+    [status, search, limit, skip]
   );
 
   const createMutation = useApiMutation(purchaseInvoiceService.create);
@@ -48,6 +56,7 @@ export function usePurchaseInvoices(status?: string, search?: string) {
 
   return {
     purchaseInvoices: items,
+    pagination,
     loading: loading || createMutation.loading || updateMutation.loading || deleteMutation.loading,
     error: error || createMutation.error || updateMutation.error || deleteMutation.error,
     refetch,
@@ -58,10 +67,18 @@ export function usePurchaseInvoices(status?: string, search?: string) {
 }
 
 // Hook pour les factures de vente
-export function useSaleInvoices(status?: string, search?: string) {
+export function useSaleInvoices(status?: string, search?: string, limit?: number, skip?: number) {
+  const [pagination, setPagination] = useState<any>(null);
+  
   const { items, loading, error, refetch, addItem, updateItem, removeItem } = useApiList(
-    () => saleInvoiceService.getAll(status, search),
-    [status, search]
+    async () => {
+      const result = await saleInvoiceService.getAll(status, search, limit, skip);
+      if (result.pagination) {
+        setPagination(result.pagination);
+      }
+      return result.data;
+    },
+    [status, search, limit, skip]
   );
 
   const createMutation = useApiMutation(saleInvoiceService.create);
@@ -95,6 +112,7 @@ export function useSaleInvoices(status?: string, search?: string) {
 
   return {
     saleInvoices: items,
+    pagination,
     loading: loading || createMutation.loading || updateMutation.loading || deleteMutation.loading,
     error: error || createMutation.error || updateMutation.error || deleteMutation.error,
     refetch,

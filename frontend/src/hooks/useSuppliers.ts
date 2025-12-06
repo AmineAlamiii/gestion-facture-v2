@@ -3,10 +3,18 @@ import { Supplier, CreateSupplierRequest, UpdateSupplierRequest } from '../types
 import { supplierService } from '../services/api';
 import { useApiList, useApiMutation } from './useApi';
 
-export function useSuppliers(search?: string) {
+export function useSuppliers(search?: string, limit?: number, skip?: number) {
+  const [pagination, setPagination] = useState<any>(null);
+  
   const { items, loading, error, refetch, addItem, updateItem, removeItem } = useApiList(
-    () => supplierService.getAll(search),
-    [search]
+    async () => {
+      const result = await supplierService.getAll(search, limit, skip);
+      if (result.pagination) {
+        setPagination(result.pagination);
+      }
+      return result.data;
+    },
+    [search, limit, skip]
   );
 
   const createMutation = useApiMutation(supplierService.create);
@@ -22,7 +30,7 @@ export function useSuppliers(search?: string) {
   }, [createMutation, addItem]);
 
   const updateSupplier = useCallback(async (id: string, data: UpdateSupplierRequest): Promise<Supplier | null> => {
-    const result = await updateMutation.mutate({ id, data });
+    const result = await updateMutation.mutate({ id, ...data });
     if (result) {
       updateItem(id, result);
     }
@@ -40,6 +48,7 @@ export function useSuppliers(search?: string) {
 
   return {
     suppliers: items,
+    pagination,
     loading: loading || createMutation.loading || updateMutation.loading || deleteMutation.loading,
     error: error || createMutation.error || updateMutation.error || deleteMutation.error,
     refetch,

@@ -6,8 +6,6 @@ import {
   ShoppingCart, 
   Users, 
   Building2,
-  BarChart3,
-  Settings,
   Menu,
   X
 } from 'lucide-react';
@@ -27,8 +25,6 @@ const Sidebar: React.FC<SidebarProps> = ({ activeSection, onSectionChange }) => 
     { id: 'sales', label: 'Factures Ventes', icon: FileText },
     { id: 'suppliers', label: 'Fournisseurs', icon: Building2 },
     { id: 'clients', label: 'Clients', icon: Users },
-    { id: 'reports', label: 'Rapports', icon: BarChart3 },
-    { id: 'settings', label: 'Paramètres', icon: Settings },
   ];
 
   const handleSectionChange = (section: string) => {
@@ -60,17 +56,23 @@ const Sidebar: React.FC<SidebarProps> = ({ activeSection, onSectionChange }) => 
         fixed lg:static inset-y-0 left-0 z-50 w-64 bg-white shadow-lg border-r border-gray-200 transform transition-transform duration-300 ease-in-out
         ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
       `}>
-        <div className="p-4 lg:p-6 border-b border-gray-200 flex justify-between items-center">
-          <div>
-            <h1 className="text-lg lg:text-xl font-bold text-gray-800">FactureManager</h1>
-            <p className="text-xs lg:text-sm text-gray-600 mt-1">Gestion des factures</p>
+        <div className="p-4 lg:p-6 border-b border-gray-200">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center space-x-3 flex-1">
+              <img 
+                src="/images/image.png" 
+                alt="Lyousr Medical Logo" 
+                className="h-20 lg:h-30 w-auto object-contain"
+              />
+             
+            </div>
+            <button
+              onClick={() => setIsMobileMenuOpen(false)}
+              className="lg:hidden text-gray-400 hover:text-gray-600 ml-2"
+            >
+              <X className="w-5 h-5" />
+            </button>
           </div>
-          <button
-            onClick={() => setIsMobileMenuOpen(false)}
-            className="lg:hidden text-gray-400 hover:text-gray-600"
-          >
-            <X className="w-5 h-5" />
-          </button>
         </div>
         
         <nav className="mt-4 lg:mt-6">

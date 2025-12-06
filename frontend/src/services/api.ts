@@ -45,16 +45,43 @@ async function apiCall<T>(
 ): Promise<T> {
   const url = `${getApiBaseUrl()}${endpoint}`;
   
+  // Récupérer le token depuis localStorage
+  const token = localStorage.getItem('authToken');
+  
   const defaultOptions: RequestInit = {
     headers: {
       'Content-Type': 'application/json',
+      // Ajouter le token dans les headers si disponible
+      ...(token && { 'Authorization': `Bearer ${token}` }),
     },
   };
 
-  const config = { ...defaultOptions, ...options };
+  // Fusionner les headers personnalisés avec les headers par défaut
+  const mergedHeaders = {
+    ...defaultOptions.headers,
+    ...(options.headers || {}),
+  };
+
+  const config = { 
+    ...defaultOptions, 
+    ...options,
+    headers: mergedHeaders
+  };
 
   try {
     const response = await fetch(url, config);
+    
+    // Si le token est expiré ou invalide, nettoyer et rediriger vers login
+    if (response.status === 401 || response.status === 403) {
+      localStorage.removeItem('authToken');
+      // Déclencher un événement pour informer l'application
+      window.dispatchEvent(new CustomEvent('auth:logout'));
+      throw new ApiError(
+        'Session expirée. Veuillez vous reconnecter.',
+        response.status,
+        {}
+      );
+    }
     
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
@@ -83,10 +110,30 @@ async function apiCall<T>(
 
 // Service pour les fournisseurs
 export const supplierService = {
-  async getAll(search?: string): Promise<Supplier[]> {
-    const endpoint = search ? `/suppliers?search=${encodeURIComponent(search)}` : '/suppliers';
+  async getAll(search?: string, limit?: number, skip?: number): Promise<{ data: Supplier[]; pagination?: any }> {
+    let endpoint = '/suppliers';
+    const params = new URLSearchParams();
+    if (search) params.append('search', search);
+    if (limit) params.append('limit', limit.toString());
+    if (skip) params.append('skip', skip.toString());
+    if (params.toString()) endpoint += `?${params.toString()}`;
+    
     const response = await apiCall<ApiResponse<Supplier[]>>(endpoint);
-    return response.data || [];
+    
+    // Si le backend ne retourne pas de pagination, simuler côté frontend
+    const allData = response.data || [];
+    const total = allData.length;
+    const paginatedData = limit !== undefined ? allData.slice(skip || 0, (skip || 0) + limit) : allData;
+    
+    return {
+      data: paginatedData,
+      pagination: {
+        total,
+        limit: limit || total,
+        skip: skip || 0,
+        hasMore: skip !== undefined && limit !== undefined ? (skip || 0) + limit < total : false
+      }
+    };
   },
 
   async getById(id: string): Promise<Supplier> {
@@ -108,10 +155,11 @@ export const supplierService = {
     return response.data;
   },
 
-  async update(params: { id: string; data: UpdateSupplierRequest }): Promise<Supplier> {
-    const response = await apiCall<ApiResponse<Supplier>>(`/suppliers/${params.id}`, {
+  async update(params: { id: string } & UpdateSupplierRequest): Promise<Supplier> {
+    const { id, ...data } = params;
+    const response = await apiCall<ApiResponse<Supplier>>(`/suppliers/${id}`, {
       method: 'PUT',
-      body: JSON.stringify(params.data),
+      body: JSON.stringify(data),
     });
     if (!response.data) {
       throw new ApiError('Erreur lors de la mise à jour du fournisseur', 500);
@@ -133,10 +181,30 @@ export const supplierService = {
 
 // Service pour les clients
 export const clientService = {
-  async getAll(search?: string): Promise<Client[]> {
-    const endpoint = search ? `/clients?search=${encodeURIComponent(search)}` : '/clients';
+  async getAll(search?: string, limit?: number, skip?: number): Promise<{ data: Client[]; pagination?: any }> {
+    let endpoint = '/clients';
+    const params = new URLSearchParams();
+    if (search) params.append('search', search);
+    if (limit) params.append('limit', limit.toString());
+    if (skip) params.append('skip', skip.toString());
+    if (params.toString()) endpoint += `?${params.toString()}`;
+    
     const response = await apiCall<ApiResponse<Client[]>>(endpoint);
-    return response.data || [];
+    
+    // Si le backend ne retourne pas de pagination, simuler côté frontend
+    const allData = response.data || [];
+    const total = allData.length;
+    const paginatedData = limit !== undefined ? allData.slice(skip || 0, (skip || 0) + limit) : allData;
+    
+    return {
+      data: paginatedData,
+      pagination: {
+        total,
+        limit: limit || total,
+        skip: skip || 0,
+        hasMore: skip !== undefined && limit !== undefined ? (skip || 0) + limit < total : false
+      }
+    };
   },
 
   async getById(id: string): Promise<Client> {
@@ -158,7 +226,8 @@ export const clientService = {
     return response.data;
   },
 
-  async update(id: string, data: UpdateClientRequest): Promise<Client> {
+  async update(params: { id: string } & UpdateClientRequest): Promise<Client> {
+    const { id, ...data } = params;
     const response = await apiCall<ApiResponse<Client>>(`/clients/${id}`, {
       method: 'PUT',
       body: JSON.stringify(data),
@@ -183,15 +252,20 @@ export const clientService = {
 
 // Service pour les factures d'achat
 export const purchaseInvoiceService = {
-  async getAll(status?: string, search?: string): Promise<PurchaseInvoice[]> {
+  async getAll(status?: string, search?: string, limit?: number, skip?: number): Promise<{ data: PurchaseInvoice[]; pagination?: any }> {
     let endpoint = '/invoices/purchases';
     const params = new URLSearchParams();
     if (status) params.append('status', status);
     if (search) params.append('search', search);
+    if (limit) params.append('limit', limit.toString());
+    if (skip) params.append('skip', skip.toString());
     if (params.toString()) endpoint += `?${params.toString()}`;
     
     const response = await apiCall<ApiResponse<PurchaseInvoice[]>>(endpoint);
-    return response.data || [];
+    return {
+      data: response.data || [],
+      pagination: (response as any).pagination
+    };
   },
 
   async getById(id: string): Promise<PurchaseInvoice> {
@@ -233,15 +307,20 @@ export const purchaseInvoiceService = {
 
 // Service pour les factures de vente
 export const saleInvoiceService = {
-  async getAll(status?: string, search?: string): Promise<SaleInvoice[]> {
+  async getAll(status?: string, search?: string, limit?: number, skip?: number): Promise<{ data: SaleInvoice[]; pagination?: any }> {
     let endpoint = '/invoices/sales';
     const params = new URLSearchParams();
     if (status) params.append('status', status);
     if (search) params.append('search', search);
+    if (limit) params.append('limit', limit.toString());
+    if (skip) params.append('skip', skip.toString());
     if (params.toString()) endpoint += `?${params.toString()}`;
     
     const response = await apiCall<ApiResponse<SaleInvoice[]>>(endpoint);
-    return response.data || [];
+    return {
+      data: response.data || [],
+      pagination: (response as any).pagination
+    };
   },
 
   async getById(id: string): Promise<SaleInvoice> {

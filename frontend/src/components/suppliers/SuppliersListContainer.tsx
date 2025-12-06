@@ -4,19 +4,23 @@ import SuppliersList from './SuppliersList';
 import SupplierForm from './SupplierForm';
 import { LoadingSpinner } from '../common/LoadingSpinner';
 import { ErrorMessage } from '../common/ErrorMessage';
+import Pagination from '../common/Pagination';
 
 const SuppliersListContainer: React.FC = () => {
   const [editingSupplier, setEditingSupplier] = useState<any>(null);
   const [showForm, setShowForm] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 50;
   
   const { 
     suppliers, 
+    pagination,
     loading, 
     error, 
     createSupplier, 
     updateSupplier, 
     deleteSupplier 
-  } = useSuppliers();
+  } = useSuppliers(undefined, itemsPerPage, (currentPage - 1) * itemsPerPage);
 
   const handleCreateNew = () => {
     setEditingSupplier(null);
@@ -82,13 +86,32 @@ const SuppliersListContainer: React.FC = () => {
     );
   }
 
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const totalPages = pagination ? Math.ceil(pagination.total / itemsPerPage) : 1;
+
   return (
-    <SuppliersList
-      suppliers={suppliers}
-      onEdit={handleEdit}
-      onDelete={handleDelete}
-      onCreateNew={handleCreateNew}
-    />
+    <>
+      <SuppliersList
+        suppliers={suppliers}
+        onEdit={handleEdit}
+        onDelete={handleDelete}
+        onCreateNew={handleCreateNew}
+      />
+      {pagination && (
+        <Pagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          totalItems={pagination.total}
+          itemsPerPage={itemsPerPage}
+          onPageChange={handlePageChange}
+          loading={loading}
+        />
+      )}
+    </>
   );
 };
 

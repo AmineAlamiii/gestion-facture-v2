@@ -6,21 +6,25 @@ import SalesList from './SalesList';
 import SalesForm from './SalesForm';
 import { LoadingSpinner } from '../common/LoadingSpinner';
 import { ErrorMessage } from '../common/ErrorMessage';
+import Pagination from '../common/Pagination';
 import { numberToWords } from '../../utils/invoiceUtils';
 import { getApiBaseUrl } from '../../config/api';
 
 const SalesListContainer: React.FC = () => {
   const [editingSale, setEditingSale] = useState<any>(null);
   const [showForm, setShowForm] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 50;
   
   const { 
     saleInvoices: sales, 
+    pagination,
     loading: salesLoading, 
     error: salesError, 
     createSaleInvoice, 
     updateSaleInvoice, 
     deleteSaleInvoice 
-  } = useSaleInvoices();
+  } = useSaleInvoices(undefined, undefined, itemsPerPage, (currentPage - 1) * itemsPerPage);
 
   const { 
     clients, 
@@ -213,6 +217,7 @@ const SalesListContainer: React.FC = () => {
                 <div style="text-align: right;">
                   <p style="font-size: 18px; margin: 5px 0;"><strong style="color: #1e40af;">N° Facture:</strong> <span style="color: #374151;">${fullSale.invoiceNumber}</span></p>
                 </div>
+
               </div>
               
               <div class="client-info" style="margin-bottom: 20px; background-color: #f8fafc; padding: 15px; border-radius: 8px; border-left: 4px solid #2563eb;">
@@ -298,7 +303,11 @@ const SalesListContainer: React.FC = () => {
         </html>
       `);
       printWindow.document.close();
-      printWindow.print();
+      
+      // Attendre que l'image soit chargée avant d'imprimer
+      printWindow.onload = () => {
+        printWindow.print();
+      };
       }
     } catch (error) {
       console.error('Erreur lors de l\'impression:', error);
@@ -343,16 +352,36 @@ const SalesListContainer: React.FC = () => {
     );
   }
 
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const totalPages = pagination ? Math.ceil(pagination.total / itemsPerPage) : 1;
+
   return (
-    <SalesList
-      sales={sales}
-      onEdit={handleEdit}
-      onDelete={handleDelete}
-      onView={handleView}
-      onPrint={handlePrint}
-      onCreateNew={handleCreateNew}
-    />
+    <>
+      <SalesList
+        sales={sales}
+        onEdit={handleEdit}
+        onDelete={handleDelete}
+        onView={handleView}
+        onPrint={handlePrint}
+        onCreateNew={handleCreateNew}
+      />
+      {pagination && (
+        <Pagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          totalItems={pagination.total}
+          itemsPerPage={itemsPerPage}
+          onPageChange={handlePageChange}
+          loading={salesLoading}
+        />
+      )}
+    </>
   );
 };
 
 export default SalesListContainer;
+

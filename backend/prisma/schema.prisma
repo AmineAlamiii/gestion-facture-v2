@@ -24,6 +24,8 @@ model Supplier {
   purchaseInvoices PurchaseInvoice[]
   products         Product[]
 
+  @@index([name])
+  @@index([email])
   @@map("suppliers")
 }
 
@@ -40,6 +42,8 @@ model Client {
   // Relations
   saleInvoices SaleInvoice[]
 
+  @@index([name])
+  @@index([email])
   @@map("clients")
 }
 
@@ -60,6 +64,10 @@ model PurchaseInvoice {
   // Relations
   supplier Supplier @relation(fields: [supplierId], references: [id], onDelete: Cascade)
 
+  @@index([date])
+  @@index([status])
+  @@index([supplierId])
+  @@index([createdAt])
   @@map("purchase_invoices")
 }
 
@@ -81,6 +89,10 @@ model SaleInvoice {
   // Relations
   client Client @relation(fields: [clientId], references: [id], onDelete: Cascade)
 
+  @@index([date])
+  @@index([status])
+  @@index([clientId])
+  @@index([createdAt])
   @@map("sale_invoices")
 }
 
@@ -95,6 +107,9 @@ model InvoiceItem {
   taxRate     Float   @default(0.2)
   createdAt   DateTime @default(now())
 
+  @@index([invoiceId])
+  @@index([invoiceType])
+  @@index([description])
   @@map("invoice_items")
 }
 
@@ -114,5 +129,6 @@ model Product {
   // Relations
   supplier Supplier? @relation(fields: [supplierId], references: [id])
 
+  @@index([supplierId])
   @@map("products")
 }

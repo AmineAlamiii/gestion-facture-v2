@@ -40,7 +40,10 @@ const Dashboard: React.FC<DashboardProps> = ({ purchases, sales }) => {
     totalSaleInvoices: sales.length,
     totalProducts: 0,
     profit: 0,
-    profitMargin: 0
+    profitMargin: 0,
+    purchasesChange: 0,
+    salesChange: 0,
+    profitChange: 0
   };
 
   const recentActivity = dashboardStats?.recentActivity || {
@@ -48,7 +51,7 @@ const Dashboard: React.FC<DashboardProps> = ({ purchases, sales }) => {
     recentSales: sales.slice(-5).reverse()
   };
 
-  const profit = stats.totalSales - stats.totalPurchases;
+  const profit = stats.profit !== undefined ? stats.profit : (stats.totalSales - stats.totalPurchases);
 
   return (
     <div className="space-y-6">
@@ -59,21 +62,30 @@ const Dashboard: React.FC<DashboardProps> = ({ purchases, sales }) => {
           value={stats.totalPurchases}
           icon={ShoppingCart}
           color="bg-red-500"
-          change={{ value: 12, positive: false }}
+          change={{ 
+            value: stats.purchasesChange || 0, 
+            positive: (stats.purchasesChange || 0) >= 0 
+          }}
         />
         <StatsCard
           title="Total Ventes"
           value={stats.totalSales}
           icon={FileText}
           color="bg-blue-500"
-          change={{ value: 8, positive: true }}
+          change={{ 
+            value: stats.salesChange || 0, 
+            positive: (stats.salesChange || 0) >= 0 
+          }}
         />
         <StatsCard
           title="Bénéfice"
           value={profit}
           icon={profit >= 0 ? TrendingUp : TrendingDown}
           color={profit >= 0 ? "bg-green-500" : "bg-red-500"}
-          change={{ value: 15, positive: profit >= 0 }}
+          change={{ 
+            value: stats.profitChange || 0, 
+            positive: (stats.profitChange || 0) >= 0 
+          }}
         />
         <StatsCard
           title="Factures Total"

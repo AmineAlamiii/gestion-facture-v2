@@ -253,7 +253,7 @@ export class InvoiceModel {
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `, [
       id, data.invoiceNumber, data.clientId, data.date, data.dueDate,
-      subtotal, taxAmount, total, data.status || 'draft', data.notes || '', data.basedOnPurchase || '', now, now
+      subtotal, taxAmount, total, data.status || 'paid', data.notes || '', data.basedOnPurchase || '', now, now
     ]);
 
     // Créer les articles
