@@ -3,9 +3,36 @@
 
 const express = require('express');
 const cors = require('cors');
+const jwt = require('jsonwebtoken');
 const prisma = require('../backend/src/lib/prisma');
 
 const app = express();
+
+// Configuration JWT
+const JWT_SECRET = process.env.JWT_SECRET || 'your_jwt_secret';
+
+// Fonction pour générer un token JWT
+const generateToken = (username) => {
+  return jwt.sign(
+    { username, iat: Math.floor(Date.now() / 1000) },
+    JWT_SECRET,
+    { expiresIn: '24h' }
+  );
+};
+
+// Middleware d'authentification
+const authenticateToken = (req, res, next) => {
+  const authHeader = req.headers['authorization'];
+  const token = authHeader && authHeader.split(' ')[1];
+
+  if (token == null) return res.status(401).json({ success: false, error: 'Token non fourni' });
+
+  jwt.verify(token, JWT_SECRET, (err, user) => {
+    if (err) return res.status(403).json({ success: false, error: 'Token invalide' });
+    req.user = user;
+    next();
+  });
+};
 
 // Configuration CORS pour Vercel
 const allowedOrigins = [
@@ -30,6 +57,47 @@ app.use(cors({
 }));
 
 app.use(express.json());
+
+// Routes d'authentification
+app.post('/api/auth/login', async (req, res) => {
+  try {
+    const { username, password } = req.body;
+
+    // Vérifier les identifiants (admin/Medical@123)
+    if (username === 'admin' && password === 'Medical@123') {
+      // Générer un token JWT
+      const token = generateToken(username);
+
+      res.json({
+        success: true,
+        data: {
+          token,
+          user: {
+            username: 'admin'
+          }
+        }
+      });
+    } else {
+      res.status(401).json({
+        success: false,
+        error: 'Nom d\'utilisateur ou mot de passe incorrect'
+      });
+    }
+  } catch (error) {
+    console.error('Erreur lors de la connexion:', error);
+    res.status(500).json({ success: false, error: 'Erreur interne du serveur' });
+  }
+});
+
+// Route de vérification du token (pour vérifier si le token est valide)
+app.get('/api/auth/verify', authenticateToken, (req, res) => {
+  res.json({
+    success: true,
+    data: {
+      user: req.user
+    }
+  });
+});
 
 // Fonction pour initialiser les données de test (seulement en développement)
 async function initTestData() {
@@ -89,12 +157,12 @@ async function initTestData() {
 }
 
 // Routes API - Importées depuis app-prisma.js
-// Route de santé
+// Route de santé (publique)
 app.get('/api/health', (req, res) => {
   res.json({ success: true, message: 'API fonctionnelle avec Prisma sur Vercel' });
 });
 
-// Route pour vérifier les tables
+// Route pour vérifier les tables (publique)
 app.get('/api/check-tables', async (req, res) => {
   try {
     const results = {
@@ -112,7 +180,29 @@ app.get('/api/check-tables', async (req, res) => {
   }
 });
 
-// Routes des fournisseurs
+// Middleware pour protéger toutes les routes API sauf auth/login et health
+// ATTENTION: Ce middleware doit être placé APRÈS les routes publiques
+app.use('/api', (req, res, next) => {
+  // Routes publiques (pas besoin d'authentification)
+  const publicRoutes = [
+    '/api/auth/login',
+    '/api/health',
+    '/api/check-tables'
+  ];
+
+  // Utiliser req.originalUrl pour obtenir le chemin complet
+  const fullPath = req.originalUrl || req.url;
+
+  // Si la route est publique, passer au suivant
+  if (publicRoutes.some(route => fullPath.startsWith(route))) {
+    return next();
+  }
+
+  // Sinon, vérifier l'authentification
+  authenticateToken(req, res, next);
+});
+
+// Routes des fournisseurs (protégées)
 app.get('/api/suppliers', async (req, res) => {
   try {
     const { search } = req.query;
